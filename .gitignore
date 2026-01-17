@@ -1,0 +1,6 @@
+outputs
+source-images
+*.png
+*.jpg
+*.jpeg
+.venv
