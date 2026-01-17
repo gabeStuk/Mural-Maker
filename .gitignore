@@ -3,4 +3,4 @@ source-images
 *.png
 *.jpg
 *.jpeg
-.venv
+venv

@@ -4,6 +4,7 @@ from pathlib import Path
 import os
 import math
 import time
+from tkinter.filedialog import askopenfilename
 
 autotune = False
 autotune_intensity = 0.5
@@ -29,6 +30,9 @@ class bcolors:
 def get_files_in_dir(dir):
     return [f.absolute() for f in Path(dir).iterdir() if f.is_file()]
 
+def get_image():
+    return askopenfilename()
+
 def get_average_color(image: Image.Image):
     image = image.convert("RGB")
     npimg = np.array(image)
@@ -44,7 +48,7 @@ def closest_color_index(colors, color):
         return idx.item()
     else: return idx[0]
 start_time = time.time()
-input_image = Image.open("FFp7m8w.jpeg")
+input_image = Image.open(get_image())
 image_ar = input_image.height / input_image.width
 input_width = 512
 input_resize = (input_width, round(input_width * image_ar))
