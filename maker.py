@@ -5,6 +5,7 @@ import os
 import math
 import time
 from tkinter.filedialog import askopenfilename
+import hashlib
 
 autotune = False
 autotune_intensity = 0.5
@@ -33,10 +34,20 @@ def get_files_in_dir(dir):
 def get_image():
     return askopenfilename()
 
+color_cache = {}
+colors_cached = 0
+
 def get_average_color(image: Image.Image):
+    global colors_cached
+    key = hashlib.sha256(image.tobytes()).hexdigest()
+    if key in color_cache:
+        return color_cache[key]
     image = image.convert("RGB")
     npimg = np.array(image)
     avg_color = np.mean(npimg, axis=(0,1))
+    color_cache[key] = tuple(avg_color.astype(int))
+    colors_cached += 1
+    print(f"Parsed colors of image {colors_cached}")
     return tuple(avg_color.astype(int))
 
 def closest_color_index(colors, color):
@@ -50,10 +61,11 @@ def closest_color_index(colors, color):
 start_time = time.time()
 input_image = Image.open(get_image())
 image_ar = input_image.height / input_image.width
-input_width = 512
-input_resize = (input_width, round(input_width * image_ar))
+# input_width = 512
+# input_resize = (input_width, round(input_width * image_ar))
 src_resize = (64, 64)
-input_image = input_image.resize(input_resize).convert("RGB")
+# input_image = input_image.resize(input_resize).convert("RGB")
+input_image = input_image.convert("RGB")
 image_sources = get_files_in_dir("source-images")
 
 source_images = []
@@ -61,18 +73,23 @@ source_images = []
 cursor_hide = '\033[?25l'
 cursor_show ='\033[?25h'
 
-for i in image_sources:
-    source_images.append(Image.open(i).resize(src_resize).convert("RGB"))
+image_num = len(image_sources)
 
-new_img = Image.new("RGBA", (input_resize[0] * src_resize[0], input_resize[1] * src_resize[1]))
+# ram eater
+for i in range(image_num):
+    source_images.append(Image.open(image_sources[i]).resize(src_resize).convert("RGB"))
+    print(f"Loaded Image {i}/{image_num} ({math.floor((float(i) / image_num) * 100)}%)")
 
+# new_img = Image.new("RGBA", (input_resize[0] * src_resize[0], input_resize[1] * src_resize[1]))
+new_img = Image.new("RGBA", (input_image.width * src_resize[0], input_image.height * src_resize[1]))
+num_iters = input_image.width * input_image.height
 width, height = input_image.size
 total = new_img.width * new_img.height
-last_prog = -1
 prog_bar_len = 20
 print(cursor_hide)
 try:
     for x in range(width):
+        prog = math.floor((x / width) * prog_bar_len)
         for y in range(height):
             p = input_image.getpixel((x, y))
             color_closest_index = closest_color_index([get_average_color(i) for i in source_images], p)
@@ -80,11 +97,8 @@ try:
             if (autotune):
                 img_to_paste = Image.blend(img_to_paste, Image.new('RGB', img_to_paste.size, p), autotune_intensity)
             new_img.paste(img_to_paste, (x * img_to_paste.size[0], y * img_to_paste.size[1]))
-        prog = math.floor((x / width) * prog_bar_len)
-        if prog != last_prog:
             os.system('cls' if os.name == 'nt' else 'clear')
-            print(f"{bcolors.ENDC}# <{bcolors.OKGREEN}{"=" * prog}{bcolors.ENDC}{"-" * (prog_bar_len - prog)}>", end='\r', flush=True)
-        last_prog = prog
+            print(f"{bcolors.ENDC}# <{bcolors.OKGREEN}{"=" * prog}{bcolors.ENDC}{"-" * (prog_bar_len - prog)}> ({x * height + y}/{num_iters})", end='\r', flush=True)
 
     new_img.save("output.png")
     new_img.show("Result")
