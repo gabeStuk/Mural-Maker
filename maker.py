@@ -50,20 +50,27 @@ def get_average_color(image: Image.Image):
     print(f"Parsed colors of image {colors_cached}")
     return tuple(avg_color.astype(int))
 
+color_closest_cache = {}
+
 def closest_color_index(colors, color):
+    if color in color_closest_cache:
+        return color_closest_cache[color]
     colors = np.array(colors)
     color = np.array(color)
     distances = np.sqrt(np.sum((colors - color)**2, axis=1))
     idx = np.where(distances == np.amin(distances))[0]
     if len(idx) == 1:
+        color_closest_cache[tuple(color)] = idx.item()
         return idx.item()
-    else: return idx[0]
+    else:
+        color_closest_cache[tuple(color)] = idx[0]
+        return idx[0]
 start_time = time.time()
 input_image = Image.open(get_image())
 image_ar = input_image.height / input_image.width
 # input_width = 512
 # input_resize = (input_width, round(input_width * image_ar))
-src_resize = (64, 64)
+src_resize = (128, 128)
 # input_image = input_image.resize(input_resize).convert("RGB")
 input_image = input_image.convert("RGB")
 image_sources = get_files_in_dir("source-images")
